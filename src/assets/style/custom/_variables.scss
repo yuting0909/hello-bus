@@ -1,0 +1,94 @@
+$variable-prefix: bs-;
+
+// font-variables
+$font-family-noto-sans: 'Noto Sans TC', sans-serif;
+$font-family-roboto: 'Roboto', sans-serif;
+$font-family-crimson: 'Crimson Pro', serif;
+$font-family-pacifico: 'Pacifico', cursive;
+$font-family-base: var(--#{$variable-prefix}font-family-noto-sans);
+$font-family-code: var(--#{$variable-prefix}font-family-noto-sans);
+
+$font-size-base: 1rem;
+
+$h1-font-size: 48px;
+$h2-font-size: 30px;
+$h3-font-size: 20px;
+$h4-font-size: 18px;
+$h5-font-size: $font-size-base;
+$h6-font-size: 14px;
+$h7-font-size: 12px;
+
+$font-sizes: (
+  1: $h1-font-size,
+  2: $h2-font-size,
+  3: $h3-font-size,
+  4: $h4-font-size,
+  5: $h5-font-size,
+  6: $h6-font-size,
+  7: $h7-font-size
+);
+
+$font-weight-lighter: lighter;
+$font-weight-light: 300;
+$font-weight-normal: 400;
+$font-weight-bold: 500;
+$font-weight-bolder: 700;
+
+$line-height-base: 1.5;
+$line-height-sm: 1.25;
+$line-height-lg: 1.75;
+$line-height-xl: 2;
+
+// theme-color-variables
+$primary: #5a637e;
+$secondary: #bcc1d1;
+$success: #8B94B2;
+$info: #5cbcdb;
+$warning: #edbe62;
+$danger: #f66a4b;
+$dark: #4c546a;
+$light: #e5e5e5;
+$black: #000000;
+
+$body-color: $dark;
+$text-muted: #b4b3b3;
+
+// spacer-variables
+$spacer: 1rem;
+$spacers: (
+  0: 0,
+  1: $spacer / 4,
+  2: $spacer / 2,
+  3: $spacer,
+  4: $spacer * 1.5,
+  5: $spacer * 2,
+  6: $spacer * 3,
+  12: $spacer * 0.75
+);
+
+// box-shadow-variables
+$box-shadow: 0 0.5rem 1rem rgba($black, 0.15);
+$box-shadow-sm: 0px 14px 24px rgba($black, 0.04);
+$box-shadow-lg: 0 1rem 3rem rgba($black, 0.175);
+$box-shadow-inset: inset 0 1px 2px rgba($black, 0.075);
+
+// border-radius-variables
+$border-radius: 0.5rem;
+$border-radius-sm: 0.25rem;
+$border-radius-lg: 1rem;
+$border-radius-pill: 50rem;
+
+// btn-variables
+$input-btn-padding-y: 0.5rem;
+$input-btn-padding-x: 0.5rem;
+$btn-box-shadow: none;
+$btn-focus-width: 0;
+$btn-focus-box-shadow: none;
+$btn-active-box-shadow: none;
+
+:root {
+  --#{$variable-prefix}font-family-noto-sans: #{inspect($font-family-noto-sans)};
+  --#{$variable-prefix}font-family-roboto: #{inspect($font-family-roboto)};
+  --#{$variable-prefix}font-family-crimson: #{inspect($font-family-crimson)};
+  --#{$variable-prefix}font-family-pacifico: #{inspect($font-family-pacifico)};
+}

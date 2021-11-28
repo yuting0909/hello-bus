@@ -1,0 +1,36 @@
+.btn {
+  color: $dark;
+  vertical-align: baseline;
+  .btn-check:focus + &,
+  &:focus {
+    outline: 0;
+    box-shadow: none;
+  }
+}
+.btn-outline-primary {
+  &.active,
+  &:hover {
+    color: $white;
+  }
+}
+
+// custom-color
+$types: (
+  blue: #5274cd,
+  red: #de6868,
+  brown: #b29076,
+  green: #83c986,
+  yellow: #edbe62,
+  orange: #e88c59,
+  grey: #b1b4be
+);
+@each $name, $color in $types {
+  .btn-#{$name} {
+    background-color: $color;
+    color: #fff;
+    &:hover {
+      background-color: darken($color, 10%);
+      color: #fff;
+    }
+  }
+}

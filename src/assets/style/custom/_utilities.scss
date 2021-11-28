@@ -1,0 +1,115 @@
+$utilities: map-merge(
+  $utilities,
+  (
+    'font-family': (
+      property: font-family,
+      class: font,
+      values: (
+        roboto: var(--#{$variable-prefix}font-family-roboto),
+        crimson: var(--#{$variable-prefix}font-family-crimson),
+        pacifico: var(--#{$variable-prefix}font-family-pacifico)
+      )
+    ),
+    'font-size': (
+      responsive: true,
+      rfs: true,
+      property: font-size,
+      class: fs,
+      values: $font-sizes
+    ),
+    'letter-spacing': (
+      property: letter-spacing,
+      class: ls,
+      values: (
+        1: 1px,
+        2: 2px,
+        3: 3px
+      )
+    ),
+    'background-color': (
+      property: background-color,
+      class: bg,
+      values:
+        map-merge(
+          $theme-colors,
+          (
+            'body': $body-bg,
+            'white': $white,
+            'transparent': transparent,
+            'primary-20': rgba($primary, 0.2)
+          )
+        )
+    ),
+    'width': (
+      responsive: true,
+      property: width,
+      class: w,
+      values: (
+        25: 25%,
+        50: 50%,
+        75: 75%,
+        100: 100%,
+        auto: auto,
+        fit: fit-content
+      )
+    ),
+    'height': (
+      responsive: true,
+      property: height,
+      class: h,
+      values: (
+        25: 25%,
+        50: 50%,
+        75: 75%,
+        100: 100%,
+        auto: auto,
+        fit: fit-content
+      )
+    ),
+    'position': (
+      responsive: true,
+      property: position,
+      values: static relative absolute fixed sticky
+    ),
+    'top': (
+      property: top,
+      values: $position-values
+    ),
+    'bottom': (
+      property: bottom,
+      values: $position-values
+    ),
+    'start': (
+      property: left,
+      class: start,
+      values: $position-values
+    ),
+    'end': (
+      property: right,
+      class: end,
+      values: $position-values
+    ),
+    'translate-middle': (
+      property: transform,
+      class: translate-middle,
+      values: (
+        null: translate(-50%, -50%),
+        x: translateX(-50%),
+        y: translateY(-50%)
+      )
+    ),
+    'rounded': (
+      property: border-radius,
+      class: rounded,
+      values: (
+        null: $border-radius,
+        0: 0,
+        1: $border-radius-sm,
+        2: 0.75rem,
+        3: $border-radius-lg,
+        circle: 50%,
+        pill: $border-radius-pill
+      )
+    )
+  )
+);
