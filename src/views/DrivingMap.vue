@@ -58,9 +58,16 @@
                   <h1 class="fs-3 text-center text-white mb-0">搜尋結果</h1>
                 </div>
                 <div
-                  class="card-body d-flex flex-column justify-content-center"
+                  class="
+                    card-body
+                    d-flex
+                    flex-column
+                    justify-content-center
+                    overflow-auto
+                  "
                 >
                   <div
+                    v-if="!routeName"
                     class="
                       default-img
                       d-flex
@@ -74,6 +81,44 @@
                       alt="尋找您的公車路線"
                     />
                     <span class="mt-2 text-secondary">尋找您的公車路線</span>
+                  </div>
+                  <div v-if="routeName && tempBusRoutes.length" class="h-100">
+                    <div
+                      v-for="bus in tempBusRoutes"
+                      :key="bus.RouteUID"
+                      class="route-item"
+                    >
+                      <h2 class="fs-3 text-danger mb-1">
+                        <a
+                          :href="`#/driving-map/${bus.RouteUID}?city=${bus.City}&routeName=${bus.RouteName.Zh_tw}`"
+                          class="stretched-link"
+                          >{{ bus.RouteName.Zh_tw }}</a
+                        >
+                      </h2>
+                      <span class="fs-7 text-muted"
+                        >{{ bus.DepartureStopNameZh
+                        }}<i class="fas fa-arrows-alt-h mx-1"></i
+                        >{{ bus.DestinationStopNameZh }}</span
+                      >
+                    </div>
+                  </div>
+                  <div
+                    v-if="!tempBusRoutes.length"
+                    class="
+                      default-img
+                      d-flex
+                      flex-column
+                      justify-content-center
+                      align-items-center
+                    "
+                  >
+                    <img
+                      src="../assets/images/signPic_wrong.png"
+                      alt="很抱歉，找不到符合的路線"
+                    />
+                    <span class="mt-2 text-secondary"
+                      >很抱歉，找不到符合的路線</span
+                    >
                   </div>
                 </div>
               </div>
@@ -463,6 +508,7 @@
 
 <script>
 import BreadcrumbBar from '@/components/BreadcrumbBar.vue'
+import getAuthorizationHeader from '@/methods/getAuthorizationHeader'
 
 export default {
   components: { BreadcrumbBar },
@@ -495,10 +541,23 @@ export default {
       ],
       city: 'Taipei',
       routeName: '',
+      busRoutes: [],
       collapseShow: false
     }
   },
   inject: ['emitter'],
+  computed: {
+    tempBusRoutes () {
+      return this.busRoutes.filter((item) =>
+        item.RouteName.Zh_tw.includes(this.routeName)
+      )
+    }
+  },
+  watch: {
+    city () {
+      this.getCityBus()
+    }
+  },
   methods: {
     keyboardHandler (event) {
       if (event.target.dataset.action) {
@@ -514,10 +573,20 @@ export default {
             break
         }
       }
+    },
+    getCityBus () {
+      this.axios({
+        method: 'get',
+        url: `https://ptx.transportdata.tw/MOTC/v2/Bus/Route/City/${this.city}?$format=JSON`,
+        headers: getAuthorizationHeader()
+      }).then((res) => {
+        this.busRoutes = res.data
+      })
     }
   },
   created () {
     this.emitter.emit('change-navbar-style', this.navbarStyle)
+    this.getCityBus()
   }
 }
 </script>
@@ -546,6 +615,14 @@ export default {
     box-shadow: none;
     height: 300px;
   }
+}
+.route-item {
+  border: 1px solid rgba(238, 238, 238, 0.5);
+  box-shadow: 0px 4px 10px -1px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  position: relative;
 }
 .keyboard {
   padding: 36px 24px;

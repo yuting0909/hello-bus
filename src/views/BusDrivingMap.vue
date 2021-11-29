@@ -62,7 +62,7 @@
                 </div>
                 <div class="stop-container mt-3 pe-3">
                   <div
-                    v-for="stop in stopRealtimeData"
+                    v-for="stop in tempRealtimeData"
                     :key="stop.StopID"
                     class="stop-item d-flex justify-content-between mb-3"
                   >
@@ -125,7 +125,7 @@
         </div>
         <div class="stop-container mt-3 pe-3">
           <div
-            v-for="stop in stopRealtimeData"
+            v-for="stop in tempRealtimeData"
             :key="stop.StopID"
             class="stop-item d-flex justify-content-between mb-3"
           >
@@ -150,18 +150,63 @@ export default {
     return {
       navbarStyle: 'light',
       collapseShow: false,
-      city: 'Taichung',
-      routeName: '300',
+      city: '',
+      routeName: '',
       routeData: {},
       busRoute: [],
       busLocation: [],
       busStop: [],
-      stopRealtimeData: [],
+      realtimeData: [],
       busDirection: 0,
       map: {},
       routeLayer: null,
       stopLayer: null,
       busLayer: null
+    }
+  },
+  computed: {
+    tempRealtimeData () {
+      const data = this.realtimeData
+        .filter((item) => item.Direction === this.busDirection)
+        .sort((a, b) => a.StopSequence - b.StopSequence)
+      const newData = []
+      data.forEach((item) => {
+        const stopData = {}
+        stopData.stopName = item.StopName.Zh_tw
+        stopData.stopUID = item.StopUID
+        stopData.PlateNumb = item.PlateNumb
+        if (item.StopStatus === 0) {
+          const time = Math.floor(item.EstimateTime / 60)
+          if (time === 0) {
+            stopData.estimateTime = '進站中'
+          } else if (time <= 1 && time > 0) {
+            stopData.estimateTime = '即將到站'
+          } else if (!time) {
+            stopData.estimateTime = '--'
+          } else {
+            stopData.estimateTime = `${time}分鐘`
+          }
+        } else if (item.StopStatus === 1) {
+          stopData.estimateTime = '尚未發車'
+        } else if (item.StopStatus === 2) {
+          stopData.estimateTime = '交管不停靠'
+        } else if (item.StopStatus === 3) {
+          stopData.estimateTime = '末班車已過'
+        } else if (item.StopStatus === 4) {
+          stopData.estimateTime = '今日未營運'
+        } else {
+          stopData.estimateTime = '--'
+        }
+        newData.push(stopData)
+      })
+      return newData
+    }
+  },
+  watch: {
+    busDirection () {
+      this.drawRoute()
+      this.drawStop()
+      this.drawBus()
     }
   },
   inject: ['emitter'],
@@ -225,42 +270,10 @@ export default {
         url: `https://ptx.transportdata.tw/MOTC/v2/Bus/EstimatedTimeOfArrival/City/${this.city}/${this.routeName}?$format=JSON`,
         headers: getAuthorizationHeader()
       }).then((res) => {
-        const data = res.data
-          .filter((item) => item.RouteName.Zh_tw === this.routeName)
-          .filter((item) => item.Direction === this.busDirection)
-          .sort((a, b) => a.StopSequence - b.StopSequence)
-        // console.log(data)
-        this.stopRealtimeData = []
-        data.forEach((item) => {
-          const stopData = {}
-          stopData.stopName = item.StopName.Zh_tw
-          stopData.stopUID = item.StopUID
-          stopData.PlateNumb = item.PlateNumb
-          if (item.StopStatus === 0) {
-            const time = Math.floor(item.EstimateTime / 60)
-            if (time === 0) {
-              stopData.estimateTime = '進站中'
-            } else if (time <= 1 && time > 0) {
-              stopData.estimateTime = '即將到站'
-            } else if (!time) {
-              stopData.estimateTime = '--'
-            } else {
-              stopData.estimateTime = `${time}分鐘`
-            }
-          } else if (item.StopStatus === 1) {
-            stopData.estimateTime = '尚未發車'
-          } else if (item.StopStatus === 2) {
-            stopData.estimateTime = '交管不停靠'
-          } else if (item.StopStatus === 3) {
-            stopData.estimateTime = '末班車已過'
-          } else if (item.StopStatus === 4) {
-            stopData.estimateTime = '今日未營運'
-          } else {
-            stopData.estimateTime = '--'
-          }
-          this.stopRealtimeData.push(stopData)
-        })
-        // console.log(this.stopRealtimeData)
+        this.realtimeData = res.data.filter(
+          (item) => item.RouteName.Zh_tw === this.routeName
+        )
+        // console.log(this.realtimeData)
       })
     },
     getShapeData () {
@@ -373,16 +386,10 @@ export default {
       }
     }
   },
-  watch: {
-    busDirection () {
-      this.drawRoute()
-      this.drawStop()
-      this.drawBus()
-      this.getRealtimeData()
-    }
-  },
   created () {
     this.emitter.emit('change-navbar-style', this.navbarStyle)
+    this.city = this.$route.query.city
+    this.routeName = this.$route.query.routeName
   },
   mounted () {
     this.initialMap()
