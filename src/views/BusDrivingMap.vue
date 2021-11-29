@@ -21,9 +21,11 @@
           </button>
         </div>
         <div class="text-end">
-          <h1 class="mb-0">5053</h1>
+          <h1 class="mb-0">{{ routeName }}</h1>
           <span
-            >桃園<i class="fas fa-arrows-alt-h mx-1"></i>龍潭(經九龍里)</span
+            >{{ routeData.DepartureStopNameZh
+            }}<i class="fas fa-arrows-alt-h mx-1"></i
+            >{{ routeData.DestinationStopNameZh }}</span
           >
         </div>
       </div>
@@ -33,7 +35,42 @@
         <div class="container">
           <div class="row gx-0 gy-2">
             <div class="col-lg-6 d-none d-sm-block">
-              <div class="realtime-data bg-light">到站時間</div>
+              <div class="realtime-data px-3 px-sm-5">
+                <div class="d-flex justify-content-between py-3 border-bottom">
+                  <div class="text-dark">
+                    <span class="text-muted fs-7">行駛方向</span> <br />
+                    <span class="text-info me-2">往</span>
+                    <span v-if="!busDirection">{{
+                      routeData.DestinationStopNameZh
+                    }}</span>
+                    <span v-else>{{ routeData.DepartureStopNameZh }}</span>
+                  </div>
+                  <button class="btn icon-btn" @click="busDirectionHandler">
+                    <div class="rounded-pill bg-info">
+                      <i
+                        class="
+                          fas fas
+                          fa-exchange-alt
+                          position-absolute
+                          top-50
+                          start-50
+                          translate-middle
+                        "
+                      ></i>
+                    </div>
+                  </button>
+                </div>
+                <div class="stop-container mt-3 pe-3">
+                  <div
+                    v-for="stop in stopRealtimeData"
+                    :key="stop.StopID"
+                    class="stop-item d-flex justify-content-between mb-3"
+                  >
+                    <span>{{ stop.stopName }}</span>
+                    <span>{{ stop.estimateTime }}</span>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="col-lg-6">
               <div id="map"></div>
@@ -57,8 +94,45 @@
         >
         <i v-else class="fas fa-caret-up"></i>
       </button>
-      <div id="realtime-data" class="realtime-data collapse bg-light">
-        <div class="py-3 px-4">到站時間</div>
+      <div
+        id="realtime-data"
+        class="realtime-data collapse px-3 px-sm-5"
+        :class="{ 'd-none': !collapseShow }"
+      >
+        <div class="d-flex justify-content-between py-3 border-bottom">
+          <div class="text-dark">
+            <span class="text-muted fs-7">行駛方向</span> <br />
+            <span class="text-info me-2">往</span>
+            <span v-if="!busDirection">{{
+              routeData.DestinationStopNameZh
+            }}</span>
+            <span v-else>{{ routeData.DepartureStopNameZh }}</span>
+          </div>
+          <button class="btn icon-btn" @click="busDirectionHandler">
+            <div class="rounded-pill bg-info">
+              <i
+                class="
+                  fas fas
+                  fa-exchange-alt
+                  position-absolute
+                  top-50
+                  start-50
+                  translate-middle
+                "
+              ></i>
+            </div>
+          </button>
+        </div>
+        <div class="stop-container mt-3 pe-3">
+          <div
+            v-for="stop in stopRealtimeData"
+            :key="stop.StopID"
+            class="stop-item d-flex justify-content-between mb-3"
+          >
+            <span>{{ stop.stopName }}</span>
+            <span>{{ stop.estimateTime }}</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -78,9 +152,11 @@ export default {
       collapseShow: false,
       city: 'Taichung',
       routeName: '300',
+      routeData: {},
       busRoute: [],
       busLocation: [],
       busStop: [],
+      stopRealtimeData: [],
       busDirection: 0,
       map: {},
       routeLayer: null,
@@ -104,7 +180,9 @@ export default {
         }
       ).addTo(this.map)
       this.getRouteData()
+      this.getShapeData()
       this.getStop()
+      this.getRealtimeData()
       this.getBusLocation()
     },
     location () {
@@ -131,6 +209,61 @@ export default {
       }
     },
     getRouteData () {
+      this.axios({
+        method: 'get',
+        url: `https://ptx.transportdata.tw/MOTC/v2/Bus/Route/City/${this.city}/${this.routeName}?$format=JSON`,
+        headers: getAuthorizationHeader()
+      }).then((res) => {
+        this.routeData = res.data.find(
+          (item) => item.RouteName.Zh_tw === this.routeName
+        )
+      })
+    },
+    getRealtimeData () {
+      this.axios({
+        method: 'get',
+        url: `https://ptx.transportdata.tw/MOTC/v2/Bus/EstimatedTimeOfArrival/City/${this.city}/${this.routeName}?$format=JSON`,
+        headers: getAuthorizationHeader()
+      }).then((res) => {
+        const data = res.data
+          .filter((item) => item.RouteName.Zh_tw === this.routeName)
+          .filter((item) => item.Direction === this.busDirection)
+          .sort((a, b) => a.StopSequence - b.StopSequence)
+        // console.log(data)
+        this.stopRealtimeData = []
+        data.forEach((item) => {
+          const stopData = {}
+          stopData.stopName = item.StopName.Zh_tw
+          stopData.stopUID = item.StopUID
+          stopData.PlateNumb = item.PlateNumb
+          if (item.StopStatus === 0) {
+            const time = Math.floor(item.EstimateTime / 60)
+            if (time === 0) {
+              stopData.estimateTime = '進站中'
+            } else if (time <= 1 && time > 0) {
+              stopData.estimateTime = '即將到站'
+            } else if (!time) {
+              stopData.estimateTime = '--'
+            } else {
+              stopData.estimateTime = `${time}分鐘`
+            }
+          } else if (item.StopStatus === 1) {
+            stopData.estimateTime = '尚未發車'
+          } else if (item.StopStatus === 2) {
+            stopData.estimateTime = '交管不停靠'
+          } else if (item.StopStatus === 3) {
+            stopData.estimateTime = '末班車已過'
+          } else if (item.StopStatus === 4) {
+            stopData.estimateTime = '今日未營運'
+          } else {
+            stopData.estimateTime = '--'
+          }
+          this.stopRealtimeData.push(stopData)
+        })
+        // console.log(this.stopRealtimeData)
+      })
+    },
+    getShapeData () {
       this.axios({
         method: 'get',
         url: `https://ptx.transportdata.tw/MOTC/v2/Bus/Shape/City/${this.city}/${this.routeName}?$format=JSON`,
@@ -184,7 +317,7 @@ export default {
       const bus = this.busLocation.filter(
         (item) => item.Direction === this.busDirection
       )
-      console.log(bus)
+      // console.log(bus)
       this.busLayer = L.layerGroup().addTo(this.map)
       bus.forEach((item) => {
         const lat = item.BusPosition.PositionLat
@@ -193,7 +326,9 @@ export default {
           icon: icon,
           title: item.PlateNumb,
           opacity: 1.0
-        }).setZIndexOffset(100).addTo(this.busLayer)
+        })
+          .setZIndexOffset(100)
+          .addTo(this.busLayer)
       })
     },
     getStop () {
@@ -205,7 +340,6 @@ export default {
         this.busStop = res.data.filter(
           (item) => item.RouteName.Zh_tw === this.routeName
         )
-        console.log(this.busStop)
         this.drawStop()
       })
     },
@@ -220,7 +354,6 @@ export default {
       const stops = this.busStop.find(
         (item) => item.Direction === this.busDirection
       ).Stops
-      console.log(stops)
       this.stopLayer = L.layerGroup().addTo(this.map)
       stops.forEach((item) => {
         const lat = item.StopPosition.PositionLat
@@ -231,11 +364,21 @@ export default {
           opacity: 1.0
         }).addTo(this.stopLayer)
       })
+    },
+    busDirectionHandler () {
+      if (this.busDirection) {
+        this.busDirection = 0
+      } else {
+        this.busDirection = 1
+      }
     }
   },
   watch: {
     busDirection () {
       this.drawRoute()
+      this.drawStop()
+      this.drawBus()
+      this.getRealtimeData()
     }
   },
   created () {
@@ -298,6 +441,8 @@ export default {
 }
 .realtime-data {
   height: 500px;
+  display: flex;
+  flex-direction: column;
   @include media-breakpoint-down(sm) {
     height: calc(100vh - 100px);
   }
@@ -311,5 +456,8 @@ export default {
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
   box-shadow: 0px 2px 12px rgba(0, 0, 0, 0.15);
+}
+.stop-container {
+  overflow: auto;
 }
 </style>
