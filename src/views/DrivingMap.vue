@@ -277,8 +277,12 @@
                     </button>
                   </div>
                   <div class="col">
-                    <button class="btn btn-grey w-100" data-action="more">
-                      更多
+                    <button
+                      class="btn btn-grey w-100"
+                      data-action="add"
+                      data-value="幹線"
+                    >
+                      幹線
                     </button>
                   </div>
                   <div class="col">
@@ -479,7 +483,13 @@
             </button>
           </div>
           <div class="col">
-            <button class="btn btn-grey w-100" data-action="more">更多</button>
+            <button
+              class="btn btn-grey w-100"
+              data-action="add"
+              data-value="幹線"
+            >
+              幹線
+            </button>
           </div>
           <div class="col">
             <button class="btn btn-light w-100" data-action="delete-all">
@@ -613,7 +623,7 @@ export default {
   box-shadow: 0px 2px 12px rgba(0, 0, 0, 0.15);
   @include media-breakpoint-down(md) {
     box-shadow: none;
-    height: 300px;
+    height: calc(100vh - 300px);
   }
 }
 .route-item {
@@ -637,6 +647,7 @@ export default {
   position: fixed;
   bottom: 0;
   width: 100%;
+  z-index: 500;
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
   box-shadow: 0px 2px 12px rgba(0, 0, 0, 0.15);

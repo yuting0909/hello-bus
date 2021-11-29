@@ -21,7 +21,7 @@
           </button>
         </div>
         <div class="text-end">
-          <h1 class="mb-0">{{ routeName }}</h1>
+          <h1 class="mb-1">{{ routeName }}</h1>
           <span
             >{{ routeData.DepartureStopNameZh
             }}<i class="fas fa-arrows-alt-h mx-1"></i
@@ -45,7 +45,11 @@
                     }}</span>
                     <span v-else>{{ routeData.DepartureStopNameZh }}</span>
                   </div>
-                  <button class="btn icon-btn" @click="busDirectionHandler">
+                  <button
+                    v-if="hasBothDirection"
+                    class="btn icon-btn"
+                    @click="busDirectionHandler"
+                  >
                     <div class="rounded-pill bg-info">
                       <i
                         class="
@@ -108,7 +112,11 @@
             }}</span>
             <span v-else>{{ routeData.DepartureStopNameZh }}</span>
           </div>
-          <button class="btn icon-btn" @click="busDirectionHandler">
+          <button
+            v-if="hasBothDirection"
+            class="btn icon-btn"
+            @click="busDirectionHandler"
+          >
             <div class="rounded-pill bg-info">
               <i
                 class="
@@ -156,7 +164,9 @@ export default {
       busRoute: [],
       busLocation: [],
       busStop: [],
+      tempStops: [],
       realtimeData: [],
+      hasBothDirection: '',
       busDirection: 0,
       map: {},
       routeLayer: null,
@@ -166,38 +176,42 @@ export default {
   },
   computed: {
     tempRealtimeData () {
-      const data = this.realtimeData
-        .filter((item) => item.Direction === this.busDirection)
-        .sort((a, b) => a.StopSequence - b.StopSequence)
-      const newData = []
-      data.forEach((item) => {
-        const stopData = {}
-        stopData.stopName = item.StopName.Zh_tw
-        stopData.stopUID = item.StopUID
-        stopData.PlateNumb = item.PlateNumb
-        if (item.StopStatus === 0) {
-          const time = Math.floor(item.EstimateTime / 60)
-          if (time === 0) {
-            stopData.estimateTime = '進站中'
-          } else if (time <= 1 && time > 0) {
-            stopData.estimateTime = '即將到站'
-          } else if (!time) {
-            stopData.estimateTime = '--'
-          } else {
-            stopData.estimateTime = `${time}分鐘`
+      const realtimeData = this.realtimeData.filter(
+        (item) => item.Direction === this.busDirection
+      )
+      const newData = this.tempStops.map((item) => ({
+        stopName: item.StopName.Zh_tw,
+        stopUID: item.StopUID,
+        stopSequence: item.StopSequence
+      }))
+      realtimeData.forEach((data) => {
+        newData.forEach((newData) => {
+          if (data.StopUID === newData.stopUID) {
+            newData.plateNumb = data.PlateNumb
+            if (data.StopStatus === 0) {
+              const time = Math.floor(data.EstimateTime / 60)
+              if (time === 0) {
+                newData.estimateTime = '進站中'
+              } else if (time <= 1 && time > 0) {
+                newData.estimateTime = '即將到站'
+              } else if (!time) {
+                newData.estimateTime = '--'
+              } else {
+                newData.estimateTime = `${time}分鐘`
+              }
+            } else if (data.StopStatus === 1) {
+              newData.estimateTime = '尚未發車'
+            } else if (data.StopStatus === 2) {
+              newData.estimateTime = '交管不停靠'
+            } else if (data.StopStatus === 3) {
+              newData.estimateTime = '末班車已過'
+            } else if (data.StopStatus === 4) {
+              newData.estimateTime = '今日未營運'
+            } else {
+              newData.estimateTime = '--'
+            }
           }
-        } else if (item.StopStatus === 1) {
-          stopData.estimateTime = '尚未發車'
-        } else if (item.StopStatus === 2) {
-          stopData.estimateTime = '交管不停靠'
-        } else if (item.StopStatus === 3) {
-          stopData.estimateTime = '末班車已過'
-        } else if (item.StopStatus === 4) {
-          stopData.estimateTime = '今日未營運'
-        } else {
-          stopData.estimateTime = '--'
-        }
-        newData.push(stopData)
+        })
       })
       return newData
     }
@@ -230,29 +244,6 @@ export default {
       this.getRealtimeData()
       this.getBusLocation()
     },
-    location () {
-      const map = this.map
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          function (position) {
-            const longitude = position.coords.longitude // 經度
-            const latitude = position.coords.latitude // 緯度
-            // console.log(longitude)
-            // console.log(latitude)
-
-            // 重新設定 view 的位置
-            map.setView([latitude, longitude], 13)
-          },
-          // 錯誤訊息
-          function (e) {
-            const msg = e.code
-            const dd = e.message
-            console.error('msg', msg)
-            console.error('dd', dd)
-          }
-        )
-      }
-    },
     getRouteData () {
       this.axios({
         method: 'get',
@@ -273,7 +264,13 @@ export default {
         this.realtimeData = res.data.filter(
           (item) => item.RouteName.Zh_tw === this.routeName
         )
-        // console.log(this.realtimeData)
+        const go = this.realtimeData.filter((item) => item.Direction === 0)
+        const back = this.realtimeData.filter((item) => item.Direction === 1)
+        if (go.length && back.length) {
+          this.hasBothDirection = true
+        } else {
+          this.hasBothDirection = false
+        }
       })
     },
     getShapeData () {
@@ -313,8 +310,7 @@ export default {
         headers: getAuthorizationHeader()
       }).then((res) => {
         this.busLocation = res.data.filter(
-          (item) =>
-            item.RouteName.Zh_tw === this.routeName && item.DutyStatus === 0
+          (item) => item.RouteName.Zh_tw === this.routeName
         )
         this.drawBus()
       })
@@ -364,11 +360,11 @@ export default {
       if (this.stopLayer) {
         this.map.removeLayer(this.stopLayer)
       }
-      const stops = this.busStop.find(
+      this.tempStops = this.busStop.find(
         (item) => item.Direction === this.busDirection
       ).Stops
       this.stopLayer = L.layerGroup().addTo(this.map)
-      stops.forEach((item) => {
+      this.tempStops.forEach((item) => {
         const lat = item.StopPosition.PositionLat
         const lon = item.StopPosition.PositionLon
         L.marker([lat, lon], {
@@ -393,7 +389,6 @@ export default {
   },
   mounted () {
     this.initialMap()
-    // this.location()
   }
 }
 </script>
