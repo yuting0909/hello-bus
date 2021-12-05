@@ -20,10 +20,6 @@ const routes = [
   {
     path: '/timetable',
     component: () => import('../views/Timetable.vue')
-  },
-  {
-    path: '/favorite',
-    component: () => import('../views/Favorite.vue')
   }
 ]
 

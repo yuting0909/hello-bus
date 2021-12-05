@@ -11,7 +11,26 @@
         <ol class="breadcrumb fs-6 fw-light mb-2">
           <li class="breadcrumb-item"><a href="#">首頁</a></li>
           <li class="breadcrumb-item">
-            <a href="#/driving-map">公車動態</a>
+            <a
+              v-if="this.$route.path.includes('/driving-map')"
+              href="#/driving-map"
+              >公車動態</a
+            >
+            <a v-if="this.$route.path.includes('/station')" href="#/station"
+              >附近站點</a
+            >
+            <a v-if="this.$route.path.includes('/timetable')" href="#/timetable"
+              >班表查詢</a
+            >
+            <a v-if="this.$route.path.includes('/favorite')" href="#/favorite"
+              >我的收藏</a
+            >
+          </li>
+          <li class="breadcrumb-item" v-if="routeData && Object.keys(routeData).length">
+            <a
+              :href="`#/driving-map/${routeData.RouteUID}?city=${routeData.City}&routeName=${routeData.RouteName.Zh_tw}`"
+              >{{ routeData.RouteName.Zh_tw }}</a
+            >
           </li>
         </ol>
       </div>
@@ -25,7 +44,11 @@ export default {
   props: {
     navbarStyle: {
       type: String,
-      default: null
+      default: undefined
+    },
+    routeData: {
+      type: Object,
+      default: undefined
     }
   }
 }
@@ -63,5 +86,8 @@ export default {
   color: #ffffff;
   box-shadow: 0px 2px 12px rgba(0, 0, 0, 0.15);
   border-radius: 0px 0px 20px 20px;
+  @include media-breakpoint-down(md) {
+    border-radius: 0;
+  }
 }
 </style>

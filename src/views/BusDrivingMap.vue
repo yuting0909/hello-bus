@@ -1,10 +1,16 @@
 <template>
   <div class="bus-driving-map">
-    <BreadcrumbBar :navbar-style="navbarStyle"></BreadcrumbBar>
+    <BreadcrumbBar
+      :navbar-style="navbarStyle"
+      :routeData="routeData"
+    ></BreadcrumbBar>
     <div class="bus-title bg-primary">
       <div class="container d-flex justify-content-between px-3 px-sm-5">
         <div class="d-flex flex-column justify-content-end">
-          <button class="btn icon-btn">
+          <button
+            class="btn icon-btn"
+            @click="this.$refs.timetableModal.show()"
+          >
             <div class="rounded-pill bg-info">
               <i
                 class="
@@ -118,16 +124,7 @@
             @click="busDirectionHandler"
           >
             <div class="rounded-pill bg-info">
-              <i
-                class="
-                  fas fas
-                  fa-exchange-alt
-                  position-absolute
-                  top-50
-                  start-50
-                  translate-middle
-                "
-              ></i>
+              <i class="fas fas fa-exchange-alt"></i>
             </div>
           </button>
         </div>
@@ -143,17 +140,19 @@
         </div>
       </div>
     </div>
+    <TimetableModal :bus="routeData" ref="timetableModal"></TimetableModal>
   </div>
 </template>
 
 <script>
 import BreadcrumbBar from '@/components/BreadcrumbBar.vue'
+import TimetableModal from '@/components/TimetableModal.vue'
 import L from 'leaflet'
 import Wkt from 'wicket'
 import getAuthorizationHeader from '@/methods/getAuthorizationHeader'
 
 export default {
-  components: { BreadcrumbBar },
+  components: { BreadcrumbBar, TimetableModal },
   data () {
     return {
       navbarStyle: 'light',
@@ -161,6 +160,7 @@ export default {
       city: '',
       routeName: '',
       routeData: {},
+      busTimetables: [],
       busRoute: [],
       busLocation: [],
       busStop: [],
@@ -182,7 +182,9 @@ export default {
       const newData = this.tempStops.map((item) => ({
         stopName: item.StopName.Zh_tw,
         stopUID: item.StopUID,
-        stopSequence: item.StopSequence
+        stopSequence: item.StopSequence,
+        plateNumb: '--',
+        estimateTime: '--'
       }))
       realtimeData.forEach((data) => {
         newData.forEach((newData) => {
@@ -200,11 +202,11 @@ export default {
                 newData.estimateTime = `${time}分鐘`
               }
             } else if (data.StopStatus === 1) {
-              newData.estimateTime = '尚未發車'
+              newData.estimateTime = data.NextBusTime || '尚未發車'
             } else if (data.StopStatus === 2) {
               newData.estimateTime = '交管不停靠'
             } else if (data.StopStatus === 3) {
-              newData.estimateTime = '末班車已過'
+              newData.estimateTime = data.NextBusTime || '末班車已過'
             } else if (data.StopStatus === 4) {
               newData.estimateTime = '今日未營運'
             } else {
@@ -243,6 +245,7 @@ export default {
       this.getStop()
       this.getRealtimeData()
       this.getBusLocation()
+      this.getBusTimetable()
     },
     getRouteData () {
       this.axios({
@@ -326,7 +329,6 @@ export default {
       const bus = this.busLocation.filter(
         (item) => item.Direction === this.busDirection
       )
-      // console.log(bus)
       this.busLayer = L.layerGroup().addTo(this.map)
       bus.forEach((item) => {
         const lat = item.BusPosition.PositionLat
@@ -380,6 +382,140 @@ export default {
       } else {
         this.busDirection = 1
       }
+    },
+    getBusTimetable () {
+      this.axios({
+        method: 'get',
+        url: `https://ptx.transportdata.tw/MOTC/v2/Bus/Schedule/City/${this.city}/${this.routeName}?$format=JSON`,
+        headers: getAuthorizationHeader()
+      }).then((res) => {
+        this.busTimetables = res.data.filter(
+          (item) => item.RouteName.Zh_tw === this.routeName
+        )
+        // 整理 timetable
+        this.routeData.Timetables = {}
+        const newTimetables = []
+        this.busTimetables.forEach((item) => {
+          if (item.Timetables) {
+            const data = {
+              subRouteName: item.SubRouteName.Zh_tw,
+              direction: item.Direction,
+              timetable: []
+            }
+            item.Timetables.forEach((timetable) => {
+              const time = timetable.StopTimes.find(
+                (item) => item.StopSequence === 1
+              ).DepartureTime
+              const index = data.timetable
+                .map((item) => item.departureTime)
+                .indexOf(time)
+              if (index === -1) {
+                data.timetable.push({
+                  departureTime: time,
+                  serviceDay: { ...timetable.ServiceDay }
+                })
+              } else {
+                const days = Object.keys(timetable.ServiceDay).filter(
+                  (day) => timetable.ServiceDay[day] === 1
+                )
+                days.forEach((day) => {
+                  data.timetable[index].serviceDay[day] = 1
+                })
+              }
+            })
+            // 依照時間排序
+            data.timetable.sort((a, b) => {
+              return (
+                a.departureTime.split(':').join('') -
+                b.departureTime.split(':').join('')
+              )
+            })
+            newTimetables.push(data)
+          }
+        })
+        // 拆分平日與假日 timetable
+        const holidayTimetable = newTimetables.map((item) => ({
+          ...item,
+          serviceDay: 'holiday',
+          timetable: item.timetable.filter(
+            (item) =>
+              item.serviceDay.Saturday === 1 && item.serviceDay.Sunday === 1
+          )
+        }))
+        this.routeData.Timetables.holiday = holidayTimetable
+        const commonTimetable = newTimetables.map((item) => ({
+          ...item,
+          serviceDay: 'common',
+          timetable: item.timetable.filter(
+            (item) =>
+              item.serviceDay.Monday === 1 &&
+              item.serviceDay.Tuesday === 1 &&
+              item.serviceDay.Wednesday === 1 &&
+              item.serviceDay.Thursday === 1 &&
+              item.serviceDay.Friday === 1
+          )
+        }))
+        this.routeData.Timetables.common = commonTimetable
+        // 整理 frequency (含去回程、子路線、不同站發車)
+        this.routeData.Frequencys = {}
+        const newFrequencys = []
+        this.busTimetables.forEach((item) => {
+          if (item.Frequencys) {
+            const data = {
+              subRouteName: item.SubRouteName.Zh_tw,
+              direction: item.Direction,
+              frequency: []
+            }
+            item.Frequencys.forEach((frequency) => {
+              const timePeriod = `${frequency.StartTime} - ${frequency.EndTime}`
+              const index = data.frequency
+                .map((item) => item.timePeriod)
+                .indexOf(timePeriod)
+              if (index === -1) {
+                data.frequency.push({
+                  timePeriod: timePeriod,
+                  startTime: frequency.StartTime,
+                  endTime: frequency.EndTime,
+                  minHeadwayMins: frequency.MinHeadwayMins,
+                  maxHeadwayMins: frequency.MaxHeadwayMins,
+                  serviceDay: { ...frequency.ServiceDay }
+                })
+              } else {
+                const days = Object.keys(frequency.ServiceDay).filter(
+                  (day) => frequency.ServiceDay[day] === 1
+                )
+                days.forEach((day) => {
+                  data.frequency[index].serviceDay[day] = 1
+                })
+              }
+            })
+            newFrequencys.push(data)
+          }
+        })
+        // 拆分平日與假日 frequency
+        const holidayFrequency = newFrequencys.map((item) => ({
+          ...item,
+          serviceDay: 'holiday',
+          frequency: item.frequency.filter(
+            (item) =>
+              item.serviceDay.Saturday === 1 && item.serviceDay.Sunday === 1
+          )
+        }))
+        this.routeData.Frequencys.holiday = holidayFrequency
+        const commonFrequency = newFrequencys.map((item) => ({
+          ...item,
+          serviceDay: 'common',
+          frequency: item.frequency.filter(
+            (item) =>
+              item.serviceDay.Monday === 1 &&
+              item.serviceDay.Tuesday === 1 &&
+              item.serviceDay.Wednesday === 1 &&
+              item.serviceDay.Thursday === 1 &&
+              item.serviceDay.Friday === 1
+          )
+        }))
+        this.routeData.Frequencys.common = commonFrequency
+      })
     }
   },
   created () {
@@ -426,19 +562,7 @@ export default {
 #map {
   height: 500px;
   @include media-breakpoint-down(sm) {
-    height: calc(100vh - 190px);
-  }
-}
-.icon-btn {
-  padding: 0;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  .rounded-pill {
-    position: relative;
-    width: 40px;
-    height: 40px;
-    font-size: 25px;
+    height: calc(100vh - 192px);
   }
 }
 .realtime-data {

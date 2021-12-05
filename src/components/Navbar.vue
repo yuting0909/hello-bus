@@ -29,7 +29,7 @@
           <router-link class="nav-link" to="/timetable">班表查詢</router-link>
         </li>
         <li class="nav-item">
-          <router-link class="nav-link" to="/favorite">我的收藏</router-link>
+          <router-link class="nav-link" to="/">我的收藏</router-link>
         </li>
       </ul>
     </div>
@@ -150,22 +150,22 @@
     <div class="collapse navbar-collapse bg-primary" id="navbarCollapse">
       <ul class="navbar-nav mx-auto">
         <li class="nav-item">
-          <router-link class="nav-link" to="/driving-map" active-class="active"
+          <router-link class="nav-link" to="/driving-map"
             >公車動態</router-link
           >
         </li>
         <li class="nav-item">
-          <router-link class="nav-link" to="/station" active-class="active"
+          <router-link class="nav-link" to="/station"
             >附近站點</router-link
           >
         </li>
         <li class="nav-item">
-          <router-link class="nav-link" to="/timetable" active-class="active"
+          <router-link class="nav-link" to="/timetable"
             >班表查詢</router-link
           >
         </li>
         <li class="nav-item">
-          <router-link class="nav-link" to="/favorite" active-class="active"
+          <router-link class="nav-link" to="/"
             >我的收藏</router-link
           >
         </li>
@@ -249,7 +249,7 @@ export default {
     padding: 0.5rem 2rem;
     margin: 1rem 0;
     letter-spacing: 2px;
-    &.active {
+    &.router-link-active {
       border: 1px solid #ffffff;
     }
   }
