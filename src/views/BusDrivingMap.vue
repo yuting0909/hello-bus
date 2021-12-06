@@ -190,6 +190,19 @@ export default {
         newData.forEach((newData) => {
           if (data.StopUID === newData.stopUID) {
             newData.plateNumb = data.PlateNumb
+            const options = {
+              day: 'numeric',
+              month: 'numeric',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false,
+              timeZone: 'Asia/Taipei'
+            }
+            const NextBusTime = new Date(data.NextBusTime).toLocaleTimeString(
+              'en-US',
+              options
+            )
             if (data.StopStatus === 0) {
               const time = Math.floor(data.EstimateTime / 60)
               if (time === 0) {
@@ -202,11 +215,13 @@ export default {
                 newData.estimateTime = `${time}分鐘`
               }
             } else if (data.StopStatus === 1) {
-              newData.estimateTime = data.NextBusTime || '尚未發車'
+              newData.estimateTime = data.NextBusTime ? NextBusTime : '尚未發車'
             } else if (data.StopStatus === 2) {
               newData.estimateTime = '交管不停靠'
             } else if (data.StopStatus === 3) {
-              newData.estimateTime = data.NextBusTime || '末班車已過'
+              newData.estimateTime = data.NextBusTime
+                ? NextBusTime
+                : '末班車已過'
             } else if (data.StopStatus === 4) {
               newData.estimateTime = '今日未營運'
             } else {
@@ -403,24 +418,26 @@ export default {
               timetable: []
             }
             item.Timetables.forEach((timetable) => {
-              const time = timetable.StopTimes.find(
-                (item) => item.StopSequence === 1
-              ).DepartureTime
-              const index = data.timetable
-                .map((item) => item.departureTime)
-                .indexOf(time)
-              if (index === -1) {
-                data.timetable.push({
-                  departureTime: time,
-                  serviceDay: { ...timetable.ServiceDay }
-                })
-              } else {
-                const days = Object.keys(timetable.ServiceDay).filter(
-                  (day) => timetable.ServiceDay[day] === 1
-                )
-                days.forEach((day) => {
-                  data.timetable[index].serviceDay[day] = 1
-                })
+              if (timetable.ServiceDay && timetable.StopTimes) {
+                const time = timetable.StopTimes.find(
+                  (item) => item.StopSequence === 1
+                ).DepartureTime
+                const index = data.timetable
+                  .map((item) => item.departureTime)
+                  .indexOf(time)
+                if (index === -1) {
+                  data.timetable.push({
+                    departureTime: time,
+                    serviceDay: { ...timetable.ServiceDay }
+                  })
+                } else {
+                  const days = Object.keys(timetable.ServiceDay).filter(
+                    (day) => timetable.ServiceDay[day] === 1
+                  )
+                  days.forEach((day) => {
+                    data.timetable[index].serviceDay[day] = 1
+                  })
+                }
               }
             })
             // 依照時間排序
@@ -441,7 +458,7 @@ export default {
             (item) =>
               item.serviceDay.Saturday === 1 && item.serviceDay.Sunday === 1
           )
-        }))
+        })).filter(item => item.timetable.length)
         this.routeData.Timetables.holiday = holidayTimetable
         const commonTimetable = newTimetables.map((item) => ({
           ...item,
@@ -454,7 +471,7 @@ export default {
               item.serviceDay.Thursday === 1 &&
               item.serviceDay.Friday === 1
           )
-        }))
+        })).filter(item => item.timetable.length)
         this.routeData.Timetables.common = commonTimetable
         // 整理 frequency (含去回程、子路線、不同站發車)
         this.routeData.Frequencys = {}

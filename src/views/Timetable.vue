@@ -604,24 +604,26 @@ export default {
             timetable: []
           }
           item.Timetables.forEach((timetable) => {
-            const time = timetable.StopTimes.find(
-              (item) => item.StopSequence === 1
-            ).DepartureTime
-            const index = data.timetable
-              .map((item) => item.departureTime)
-              .indexOf(time)
-            if (index === -1) {
-              data.timetable.push({
-                departureTime: time,
-                serviceDay: { ...timetable.ServiceDay }
-              })
-            } else {
-              const days = Object.keys(timetable.ServiceDay).filter(
-                (day) => timetable.ServiceDay[day] === 1
-              )
-              days.forEach((day) => {
-                data.timetable[index].serviceDay[day] = 1
-              })
+            if (timetable.ServiceDay && timetable.StopTimes) {
+              const time = timetable.StopTimes.find(
+                (item) => item.StopSequence === 1
+              ).DepartureTime
+              const index = data.timetable
+                .map((item) => item.departureTime)
+                .indexOf(time)
+              if (index === -1) {
+                data.timetable.push({
+                  departureTime: time,
+                  serviceDay: { ...timetable.ServiceDay }
+                })
+              } else {
+                const days = Object.keys(timetable.ServiceDay).filter(
+                  (day) => timetable.ServiceDay[day] === 1
+                )
+                days.forEach((day) => {
+                  data.timetable[index].serviceDay[day] = 1
+                })
+              }
             }
           })
           // 依照時間排序
@@ -642,7 +644,7 @@ export default {
           (item) =>
             item.serviceDay.Saturday === 1 && item.serviceDay.Sunday === 1
         )
-      }))
+      })).filter(item => item.timetable.length)
       this.selectedBus.Timetables.holiday = holidayTimetable
       const commonTimetable = newTimetables.map((item) => ({
         ...item,
@@ -655,7 +657,7 @@ export default {
             item.serviceDay.Thursday === 1 &&
             item.serviceDay.Friday === 1
         )
-      }))
+      })).filter(item => item.timetable.length)
       this.selectedBus.Timetables.common = commonTimetable
       // 整理 frequency (含去回程、子路線、不同站發車)
       this.selectedBus.Frequencys = {}

@@ -40,6 +40,7 @@
             >
             <br />
             <a
+              v-if="bus.RouteMapImageUrl"
               :href="bus.RouteMapImageUrl"
               class="text-decoration-underline text-primary"
               target="_blank"
